@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: log-viewer-backend
+    volumes:
+      - /root/code/SoftExpertExcellenceSuiteV3/System/log:/root/code/SoftExpertExcellenceSuiteV3/System/log
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: log-viewer-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
