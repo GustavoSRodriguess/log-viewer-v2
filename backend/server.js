@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const cors = require('cors');
+const { error } = require('console');
 
 const app = express();
 app.use(cors());
@@ -49,6 +50,74 @@ async function getAllFiles(dir) {
     }
 
     return fileGroups;
+}
+
+async function isTodayLog(filePath) {
+    try {
+        const fileName = path.basename(filePath);
+        const dateMatch = fileName.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+
+        if (dateMatch) {
+            const [_, year, month, day] = dateMatch;
+            const today = new Date();
+
+            return year === today.getFullYear().toString() &&
+                month === (today.getMonth() + 1).toString().padStart(2, '0') &&
+                day === today.getDate().toString().padStart(2, '0');
+        }
+
+        const content = await fs.readFile(filePath, 'utf8');
+        const firstLines = content.split('\n').slice(0, 10).join('\n');
+        const contentDateMatch = firstLines.match(/\[(\d{2})-(\d{2})-(\d{4})/);
+
+        if (contentDateMatch) {
+            const [_, day, month, year] = contentDateMatch;
+            const today = new Date();
+
+            return year === today.getFullYear().toString() &&
+                month === (today.getMonth() + 1).toString().padStart(2, '0') &&
+                day === today.getDate().toString().padStart(2, '0');
+        }
+
+        return false;
+    } catch (e) {
+        console.error(`Error checking the file date ${filePath}: ${e}`);
+        return false;
+    }
+}
+
+async function deleteOldLogs(dir) {
+    const deletedFiles = [];
+    const error = [];
+
+    const processDirectory = async (currentDir) => {
+        const files = await fs.readdir(currentDir);
+        
+        for (const file of files) {
+            const filePath = path.join(currentDir, file);
+            const stat = await fs.stat(filePath);
+
+            if (stat.isDirectory()) {
+                await processDirectory(filePath)
+            } else if (file.endsWith('.log')) {
+                try {
+                    const isToday = await isTodayLog(filePath);
+    
+                    if (!isToday) {
+                        await fs.unlink(filePath);
+                        deletedFiles.push(path.relative(LOG_DIR, filePath));
+                    }
+                } catch (e) {
+                    error.push({
+                        file: path.relative(LOG_DIR, filePath),
+                        error: e.message
+                    })
+                }
+            }
+        }
+    };
+    await processDirectory();
+    return { deletedFiles, error };
 }
 
 app.get('/api/logs', async (req, res) => {
@@ -101,6 +170,27 @@ app.delete('/api/logs', async (req, res) => {
         res.json({ message: 'All log files deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/logs/old', async (req, res) => {
+    try {
+        const result = await deleteOldLogs(LOG_DIR);
+
+        if (result.error.length > 0) {
+            res.status(207).json({
+                message: 'Some files could not be deleted',
+                deleteFiles: result.deletedFiles,
+                error: result.error
+            });
+        } else {
+            res.json({
+                message: 'All files deleted with success',
+                deleteFiles: result.deletedFiles
+            });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

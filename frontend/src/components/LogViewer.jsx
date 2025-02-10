@@ -29,13 +29,12 @@ const LogViewer = () => {
         try {
             const response = await fetch(`${API_URL}/api/logs`);
             const files = await response.json();
-            setLogFiles(files); // A API já retorna os arquivos agrupados
+            setLogFiles(files);
         } catch (error) {
             console.error('Error fetching log files:', error);
         }
     };
 
-    // O resto do código permanece igual
     const fetchLogContent = async (filename) => {
         setLoading(true);
         try {
@@ -89,6 +88,32 @@ const LogViewer = () => {
             }
         }
     };
+
+    const deleteOldLog = async () => {
+        if (window.confirm('Tem certeza que deseja deletar os logs antigos?')) {
+            try {
+                const response = await fetch(`${API_URL}/api/logs/old`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`Deletado com sucesso ${result.deletedFiles.length} logs antigos`)
+                } else if (response.status === 207) {
+                    alert(`Alguns arquivos form deletados ${result.deletedFiles.length}`)
+                }
+
+                setSelectedFile(null);
+                setLogs([]);
+                setFilteredLogs([]);
+                fetchLogFiles();
+            } catch (e) {
+                console.error('Erro ao limpar dados: ', e);
+                alert('Ocorreu um erro ao deletar os logs antigs, tente novamente');
+            }
+        }
+    }
 
     const toggleFolder = (folderName) => {
         setExpandedFolders(prev => ({
@@ -156,6 +181,7 @@ const LogViewer = () => {
                     <Header
                         onClearAll={clearAllLogs}
                         onRefresh={fetchLogFiles}
+                        onDeleteOld={deleteOldLog}
                     />
                 </div>
 
