@@ -88,7 +88,7 @@ async function isTodayLog(filePath) {
 
 async function deleteOldLogs(dir) {
     const deletedFiles = [];
-    const error = [];
+    const errors = [];
 
     const processDirectory = async (currentDir) => {
         const files = await fs.readdir(currentDir);
@@ -110,15 +110,36 @@ async function deleteOldLogs(dir) {
                 } catch (e) {
                     error.push({
                         file: path.relative(LOG_DIR, filePath),
-                        error: e.message
+                        errors: e.message
                     })
                 }
             }
         }
     };
-    await processDirectory();
-    return { deletedFiles, error };
+    await processDirectory(dir);
+    return { deletedFiles, errors };
 }
+
+app.delete('/api/logs/old', async (req, res) => {
+    try {
+        const result = await deleteOldLogs(LOG_DIR);
+
+        if (result.errors.length > 0) {
+            res.status(207).json({
+                message: 'Some files could not be deleted',
+                deletedFiles: result.deletedFiles,
+                error: result.errors
+            });
+        } else {
+            res.json({
+                message: 'All files deleted with success',
+                deletedFiles: result.deletedFiles
+            });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.get('/api/logs', async (req, res) => {
     try {
@@ -170,27 +191,6 @@ app.delete('/api/logs', async (req, res) => {
         res.json({ message: 'All log files deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/logs/old', async (req, res) => {
-    try {
-        const result = await deleteOldLogs(LOG_DIR);
-
-        if (result.error.length > 0) {
-            res.status(207).json({
-                message: 'Some files could not be deleted',
-                deleteFiles: result.deletedFiles,
-                error: result.error
-            });
-        } else {
-            res.json({
-                message: 'All files deleted with success',
-                deleteFiles: result.deletedFiles
-            });
-        }
-    } catch (e) {
-        res.status(500).json({ error: e.message });
     }
 });
 

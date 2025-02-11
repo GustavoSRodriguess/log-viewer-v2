@@ -97,11 +97,16 @@ const LogViewer = () => {
                 });
 
                 const result = await response.json();
-                
-                if (response.ok) {
-                    alert(`Deletado com sucesso ${result.deletedFiles.length} logs antigos`)
-                } else if (response.status === 207) {
-                    alert(`Alguns arquivos form deletados ${result.deletedFiles.length}`)
+
+                if (response.status === 500) {
+                    throw new Error(result.error || 'Erro interno do servidor');
+                }
+
+                if (response.status === 207) {
+                    const errorCount = result.errors?.length || 0;
+                    alert(`Parcialmente concluído.\nArquivos deletados: ${result.deletedFiles.length}\nErros encontrados: ${errorCount}`);
+                } else {
+                    alert(`Deletado com sucesso ${result.deletedFiles.length} logs antigos`);
                 }
 
                 setSelectedFile(null);
@@ -109,11 +114,11 @@ const LogViewer = () => {
                 setFilteredLogs([]);
                 fetchLogFiles();
             } catch (e) {
-                console.error('Erro ao limpar dados: ', e);
-                alert('Ocorreu um erro ao deletar os logs antigs, tente novamente');
+                console.error('Erro ao limpar dados:', e);
+                alert(`Ocorreu um erro ao deletar os logs antigos: ${e.message}`);
             }
         }
-    }
+    };
 
     const toggleFolder = (folderName) => {
         setExpandedFolders(prev => ({
