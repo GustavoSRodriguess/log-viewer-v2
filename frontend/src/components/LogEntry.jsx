@@ -17,20 +17,26 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
 
     return (
         <div
-            className={`p-4 rounded border ${log.level === 'Error' ? 'bg-red-50 border-red-200' :
-                    log.level === 'Warning' ? 'bg-yellow-50 border-yellow-200' :
-                        log.level === 'Notice' ? 'bg-blue-50 border-blue-200' :
-                            'bg-gray-50 border-gray-200'
+            className={`p-4 rounded border ${log.level === 'Error'
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : log.level === 'Warning'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                        : log.level === 'Notice'
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 }`}
         >
             <div className="flex justify-between items-start">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm text-gray-600">{log.timestamp}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs ${log.level === 'Error' ? 'bg-red-200 text-red-800' :
-                                log.level === 'Warning' ? 'bg-yellow-200 text-yellow-800' :
-                                    log.level === 'Notice' ? 'bg-blue-200 text-blue-800' :
-                                        'bg-gray-200 text-gray-800'
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{log.timestamp}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs ${log.level === 'Error'
+                                ? 'bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200'
+                                : log.level === 'Warning'
+                                    ? 'bg-yellow-200 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                    : log.level === 'Notice'
+                                        ? 'bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                             }`}>
                             {log.level}
                         </span>
@@ -39,7 +45,7 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
                         {hasCollapsibleContent && (
                             <button
                                 onClick={() => onToggleExpand(index)}
-                                className="mt-1 text-gray-500 hover:text-gray-700"
+                                className="mt-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                             >
                                 {isExpanded ?
                                     <ChevronDown className="w-4 h-4" /> :
@@ -48,11 +54,11 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
                             </button>
                         )}
                         <div className="flex-1">
-                            <pre className="text-sm whitespace-pre-wrap break-words">
+                            <pre className="text-sm whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100">
                                 {getDisplayMessage()}
                             </pre>
                             {log.hasStack && isExpanded && (
-                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 text-gray-600">
+                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">
                                     {log.stackTrace.join('\n')}
                                 </pre>
                             )}

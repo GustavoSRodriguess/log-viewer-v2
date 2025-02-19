@@ -5,6 +5,8 @@ import { FolderView } from './FolderView';
 import { LogEntry } from './LogEntry';
 import { useLogParser } from '../hooks/userLogParser';
 import { API_URL } from '../config';
+import { ThemeToggle } from './ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
 
 const LogViewer = () => {
     const [logs, setLogs] = useState([]);
@@ -13,7 +15,7 @@ const LogViewer = () => {
         zarabatana: [],
         tomcat: [],
         platform: [],
-        others: []
+        others: [],
     });
     const [selectedFile, setSelectedFile] = useState(null);
     const [filteredLogs, setFilteredLogs] = useState([]);
@@ -59,7 +61,7 @@ const LogViewer = () => {
         if (window.confirm('Tem certeza que deseja apagar TODOS os arquivos de log? Esta ação não pode ser desfeita.')) {
             try {
                 await fetch(`${API_URL}/api/logs`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
                 });
                 setSelectedFile(null);
                 setLogs([]);
@@ -75,7 +77,7 @@ const LogViewer = () => {
         if (window.confirm('Tem certeza que deseja deletar este arquivo de log?')) {
             try {
                 await fetch(`${API_URL}/api/logs/${filename}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
                 });
                 if (selectedFile === filename) {
                     setSelectedFile(null);
@@ -93,7 +95,7 @@ const LogViewer = () => {
         if (window.confirm('Tem certeza que deseja deletar os logs antigos?')) {
             try {
                 const response = await fetch(`${API_URL}/api/logs/old`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
                 });
 
                 const result = await response.json();
@@ -121,16 +123,16 @@ const LogViewer = () => {
     };
 
     const toggleFolder = (folderName) => {
-        setExpandedFolders(prev => ({
+        setExpandedFolders((prev) => ({
             ...prev,
-            [folderName]: !prev[folderName]
+            [folderName]: !prev[folderName],
         }));
     };
 
     const toggleExpand = (index) => {
-        setExpandedLogs(prev => ({
+        setExpandedLogs((prev) => ({
             ...prev,
-            [index]: !prev[index]
+            [index]: !prev[index],
         }));
     };
 
@@ -142,29 +144,30 @@ const LogViewer = () => {
         let filtered = logs;
 
         if (searchTerm) {
-            filtered = filtered.filter(log =>
-                log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (log.hasStack && log.stackTrace.some(line =>
-                    line.toLowerCase().includes(searchTerm.toLowerCase())
-                ))
+            filtered = filtered.filter(
+                (log) =>
+                    log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (log.hasStack &&
+                        log.stackTrace.some((line) => line.toLowerCase().includes(searchTerm.toLowerCase())))
             );
         }
 
         if (selectedLevel !== 'all') {
-            filtered = filtered.filter(log => log.level === selectedLevel);
+            filtered = filtered.filter((log) => log.level === selectedLevel);
         }
 
         setFilteredLogs(filtered);
     }, [logs, searchTerm, selectedLevel]);
 
     return (
-        <div className="h-screen bg-gray-100 flex overflow-hidden">
+        <div className="h-screen bg-gray-100 dark:bg-gray-900 flex overflow-hidden transition-colors duration-200">
             {/* sidebar */}
-            <div className="w-80 bg-white shadow-lg flex flex-col overflow-hidden">
-                <div className="p-4 border-b">
-                    <h2 className="text-lg font-semibold">Log Files</h2>
+            <div className="w-80 bg-white dark:bg-gray-800 shadow-lg flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Log Files</h2>
+                    <ThemeToggle />
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 dark:text-gray-100">
                     {Object.entries(logFiles).map(([folder, files]) => (
                         <FolderView
                             key={folder}
@@ -180,9 +183,9 @@ const LogViewer = () => {
                 </div>
             </div>
 
-            {/* main content */}
+            {/* main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="bg-white shadow-sm p-4">
+                <div className="bg-white dark:bg-gray-800 shadow-sm p-4">
                     <Header
                         onClearAll={clearAllLogs}
                         onRefresh={fetchLogFiles}
@@ -202,7 +205,7 @@ const LogViewer = () => {
                         <div className="flex-1 overflow-y-auto">
                             {loading ? (
                                 <div className="flex justify-center items-center h-40">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-yellow-500"></div>
                                 </div>
                             ) : (
                                 <div className="space-y-4">

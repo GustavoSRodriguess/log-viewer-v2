@@ -1,10 +1,11 @@
 import LogViewer from './components/LogViewer'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <LogViewer />
-    </div>
+    <ThemeProvider>
+        <LogViewer />
+    </ThemeProvider>
   )
 }
 
