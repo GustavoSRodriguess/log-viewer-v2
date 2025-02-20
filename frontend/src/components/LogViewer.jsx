@@ -7,6 +7,7 @@ import { useLogParser } from '../hooks/userLogParser';
 import { API_URL } from '../config';
 import { ThemeToggle } from './ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import { NotificationAlert } from './NotificationAlert';
 
 const LogViewer = () => {
     const [logs, setLogs] = useState([]);
@@ -165,6 +166,11 @@ const LogViewer = () => {
             <div className="w-80 bg-white dark:bg-gray-800 shadow-lg flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Log Files</h2>
+                    <NotificationAlert
+                        selectedFile={selectedFile}
+                        parseLog={parseLog}
+                        setLogs={setLogs}
+                    />
                     <ThemeToggle />
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 dark:text-gray-100">
