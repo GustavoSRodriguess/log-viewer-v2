@@ -1,7 +1,7 @@
 import React from 'react';
-import { Filter } from 'lucide-react';
+import { ChevronsDownIcon, ChevronsUpIcon, Filter } from 'lucide-react';
 
-export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelChange, onScrollToTop }) => (
+export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelChange, onScrollToTop, onScrollToBotton }) => (
     <div className="flex gap-4 mb-6 items-center">
         <div className="flex-1">
             <div className="relative">
@@ -27,14 +27,17 @@ export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelCh
             <option value="Error">Error</option>
             <option value="Info">Info</option>
         </select>
-
-        {onScrollToTop && (
-            <button
-                onClick={onScrollToTop}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            >
-                Go to top
-            </button>
-        )}
+        
+        {/* {onScrollToTop && ( */}
+            <ChevronsDownIcon
+                onClick={onScrollToBotton}
+                className='h-10 w-10 bg-gray-800 rounded text-gray-300 cursor-pointer hover:text-banana'
+                //className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            />
+        {/* )} */}
+        <ChevronsUpIcon
+            className='h-10 w-10 bg-gray-800 rounded text-gray-300 cursor-pointer hover:text-banana'
+            onClick={onScrollToTop}
+        />
     </div>
 );

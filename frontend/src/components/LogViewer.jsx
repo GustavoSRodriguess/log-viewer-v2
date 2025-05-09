@@ -7,6 +7,7 @@ import { useLogParser } from '../hooks/userLogParser';
 import { API_URL } from '../config';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationAlert } from './NotificationAlert';
+import { BananaIcon } from 'lucide-react';
 
 const LogViewer = () => {
     const [logs, setLogs] = useState([]);
@@ -181,7 +182,11 @@ const LogViewer = () => {
             {/* sidebar */}
             <div className="w-80 bg-white dark:bg-gray-800 shadow-lg flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Log Files</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {/*talvez eu devesse ter criado um cor no tailwind*/}
+                        <span className='text-banana'>Banana</span> Log
+                    </h2>
+                    <BananaIcon className='text-banana' />
                     <NotificationAlert
                         selectedFile={selectedFile}
                         parseLog={parseLog}
@@ -225,9 +230,14 @@ const LogViewer = () => {
                             onScrollToTop={() => {
                                 setTimeout(() => {
                                     if (logContainerRef.current) {
-                                        //ir para o final
-                                        // logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
                                         logContainerRef.current.scrollTop = 0;
+                                    }
+                                }, 100);
+                            }}
+                            onScrollToBotton={() => {
+                                setTimeout(() => {
+                                    if (logContainerRef.current) {
+                                        logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
                                     }
                                 }, 100);
                             }}
