@@ -29,27 +29,34 @@ async function getAllFiles(dir) {
                 if (fileGroups[group]) {
                     fileGroups[group].push(...subFiles[group]);
                 } else {
+                    // This case should ideally not happen if groups are well-defined
+                    // or subFiles always return the same group structure.
+                    // For safety, pushing to others if group doesn't exist.
                     fileGroups.others.push(...subFiles[group]);
                 }
             }
-        } else if (file.endsWith('.log')) {
+        } else if (file.endsWith(".log")) {
             const relativePath = path.relative(LOG_DIR, filePath);
+        const fileInfo = {
+            name: relativePath,
+            mtime: stat.mtime.toISOString()
+        };
 
-            if (relativePath.toLowerCase().includes('baseclass')) {
-                fileGroups.baseclass.push(relativePath);
-            } else if (relativePath.toLowerCase().includes('zarabatana')) {
-                fileGroups.zarabatana.push(relativePath);
-            } else if (relativePath.toLowerCase().includes('tomcat')) {
-                fileGroups.tomcat.push(relativePath);
+        if (relativePath.toLowerCase().includes('baseclass')) {
+                fileGroups.baseclass.push(fileInfo);
+    } else if (relativePath.toLowerCase().includes('zarabatana')) {
+                fileGroups.zarabatana.push(fileInfo);
+} else if (relativePath.toLowerCase().includes('tomcat')) {
+                fileGroups.tomcat.push(fileInfo);
             } else if (relativePath.toLowerCase().includes('platform')) {
-                fileGroups.platform.push(relativePath);
+                fileGroups.platform.push(fileInfo);
             } else {
-                fileGroups.others.push(relativePath);
-            }
+    fileGroups.others.push(fileInfo);
+}
         }
     }
 
-    return fileGroups;
+return fileGroups;
 }
 
 async function isTodayLog(filePath) {
@@ -92,79 +99,80 @@ async function deleteOldLogs(dir) {
 
     const processDirectory = async (currentDir) => {
         const files = await fs.readdir(currentDir);
-        
+
         for (const file of files) {
             const filePath = path.join(currentDir, file);
             const stat = await fs.stat(filePath);
 
             if (stat.isDirectory()) {
                 await processDirectory(filePath)
-            } else if (file.endsWith('.log')) {
+            } else if (file.endsWith(".log")) {
                 try {
                     const isToday = await isTodayLog(filePath);
-    
+
                     if (!isToday) {
                         await fs.unlink(filePath);
                         deletedFiles.push(path.relative(LOG_DIR, filePath));
                     }
                 } catch (e) {
-                    error.push({
+                    errors.push({
                         file: path.relative(LOG_DIR, filePath),
-                        errors: e.message
+                        error: e.message
                     })
                 }
-            }
         }
-    };
-    await processDirectory(dir);
-    return { deletedFiles, errors };
+    }
+};
+await processDirectory(dir);
+return { deletedFiles, errors };
 }
 
 app.delete('/api/logs/old', async (req, res) => {
     try {
-        const result = await deleteOldLogs(LOG_DIR);
+    const result = await deleteOldLogs(LOG_DIR);
 
-        if (result.errors.length > 0) {
-            res.status(207).json({
-                message: 'Some files could not be deleted',
+    if (result.errors.length > 0) {
+        res.status(207).json({
+            message: 'Some files could not be deleted',
                 deletedFiles: result.deletedFiles,
-                error: result.errors
-            });
-        } else {
-            res.json({
-                message: 'All files deleted with success',
+            errors: result.errors
+        });
+    } else {
+        res.json({
+            message: 'All old log files deleted successfully',
                 deletedFiles: result.deletedFiles
-            });
-        }
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+        });
     }
+} catch (e) {
+    res.status(500).json({ error: e.message });
+}
 });
 
 app.get('/api/logs', async (req, res) => {
     try {
-        const logGroups = await getAllFiles(LOG_DIR);
-        res.json(logGroups);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    const logGroups = await getAllFiles(LOG_DIR);
+    res.json(logGroups);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
 });
 
 app.get('/api/logs/:filename(*)', async (req, res) => {
     try {
-        const filePath = path.join(LOG_DIR, req.params.filename);
-        const content = await fs.readFile(filePath, 'utf8');
+    const filePath = path.join(LOG_DIR, req.params.filename);
+    const content = await fs.readFile(filePath, 'utf8');
         res.send(content);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
 });
 
 app.delete('/api/logs/:filename(*)', async (req, res) => {
     try {
-        const filePath = path.join(LOG_DIR, req.params.filename);
-        await fs.unlink(filePath);
-        res.json({ message: 'File deleted successfully' });
+    const filePath = path.join(LOG_DIR, req.params.filename);
+    await fs.unlink(filePath);
+    res.json({
+        message: 'File deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -172,26 +180,27 @@ app.delete('/api/logs/:filename(*)', async (req, res) => {
 
 app.delete('/api/logs', async (req, res) => {
     try {
-        const deleteFiles = async (dir) => {
-            const files = await fs.readdir(dir);
+    const deleteFilesRecursively = async (dir) => { // Renamed for clarity
+        const entries = await fs.readdir(dir, { withFileTypes: true });
 
-            for (const file of files) {
-                const filePath = path.join(dir, file);
-                const stat = await fs.stat(filePath);
-
-                if (stat.isDirectory()) {
-                    await deleteFiles(filePath);
-                } else if (file.endsWith('.log')) {
-                    await fs.unlink(filePath);
-                }
-            }
-        };
-
-        await deleteFiles(LOG_DIR);
-        res.json({ message: 'All log files deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                await deleteFilesRecursively(fullPath);
+                // Optionally remove empty directories after deleting their contents
+                // await fs.rmdir(fullPath); 
+            } else if (entry.name.endsWith(".log")) {
+                    await fs.unlink(fullPath);
+        }
     }
+};
+
+await deleteFilesRecursively(LOG_DIR);
+res.json({
+    message: 'All log files deleted successfully' });
+    } catch (error) {
+    res.status(500).json({ error: error.message });
+}
 });
 
 const PORT = 3001;

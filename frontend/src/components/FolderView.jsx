@@ -17,11 +17,11 @@ export const FolderView = ({ folder, files, isExpanded, onToggle, selectedFile, 
         </button>
         {isExpanded && (
             <div className="p-2 space-y-1">
-                {files.map((file) => (
+                {files.map((fileInfo) => (
                     <LogFile
-                        key={file}
-                        file={file}
-                        isSelected={selectedFile === file}
+                        key={fileInfo.name} // Use fileInfo.name as key
+                        fileInfo={fileInfo} // Pass the whole fileInfo object
+                        isSelected={selectedFile === fileInfo.name} // Compare with fileInfo.name
                         onSelect={onSelectFile}
                         onDelete={onDeleteFile}
                     />
