@@ -1,8 +1,8 @@
 import React from 'react';
 import { Filter } from 'lucide-react';
 
-export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelChange }) => (
-    <div className="flex gap-4 mb-6">
+export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelChange, onScrollToTop }) => (
+    <div className="flex gap-4 mb-6 items-center">
         <div className="flex-1">
             <div className="relative">
                 <Filter className="absolute left-3 top-3 text-gray-400 dark:text-gray-500 w-4 h-4" />
@@ -15,6 +15,7 @@ export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelCh
                 />
             </div>
         </div>
+
         <select
             className="border rounded px-4 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
             value={selectedLevel}
@@ -26,5 +27,14 @@ export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelCh
             <option value="Error">Error</option>
             <option value="Info">Info</option>
         </select>
+
+        {onScrollToTop && (
+            <button
+                onClick={onScrollToTop}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+                Go to top
+            </button>
+        )}
     </div>
 );

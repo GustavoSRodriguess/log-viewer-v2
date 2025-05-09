@@ -16,6 +16,7 @@ async function getAllFiles(dir) {
         zarabatana: [],
         tomcat: [],
         platform: [],
+        machete: [],
         others: []
     };
 
@@ -37,22 +38,31 @@ async function getAllFiles(dir) {
             }
         } else if (file.endsWith(".log")) {
             const relativePath = path.relative(LOG_DIR, filePath);
-        const fileInfo = {
-            name: relativePath,
-            mtime: stat.mtime.toISOString()
-        };
+            const fileInfo = {
+                name: relativePath,
+                mtime: stat.mtime.toISOString()
+            };
 
-        if (relativePath.toLowerCase().includes('baseclass')) {
-                fileGroups.baseclass.push(fileInfo);
-    } else if (relativePath.toLowerCase().includes('zarabatana')) {
-                fileGroups.zarabatana.push(fileInfo);
-} else if (relativePath.toLowerCase().includes('tomcat')) {
-                fileGroups.tomcat.push(fileInfo);
-            } else if (relativePath.toLowerCase().includes('platform')) {
-                fileGroups.platform.push(fileInfo);
-            } else {
-    fileGroups.others.push(fileInfo);
-}
+            switch (true) {
+                case relativePath.toLowerCase().includes('baseclass'):
+                    fileGroups.baseclass.push(fileInfo);
+                    break;
+                case relativePath.toLowerCase().includes('zarabatana'):
+                    fileGroups.zarabatana.push(fileInfo);
+                    break;
+                case relativePath.toLowerCase().includes('tomcat'):
+                    fileGroups.tomcat.push(fileInfo);
+                    break;
+                case relativePath.toLowerCase().includes('platform'):
+                    fileGroups.platform.push(fileInfo);
+                    break;
+                case relativePath.toLowerCase().includes('machete'):
+                    fileGroups.machete.push(fileInfo);
+                    break;
+                default:
+                fileGroups.others.push(fileInfo);
+                break;
+            }
         }
     }
 
@@ -180,7 +190,7 @@ app.delete('/api/logs/:filename(*)', async (req, res) => {
 
 app.delete('/api/logs', async (req, res) => {
     try {
-    const deleteFilesRecursively = async (dir) => { // Renamed for clarity
+    const deleteFilesRecursively = async (dir) => {
         const entries = await fs.readdir(dir, { withFileTypes: true });
 
         for (const entry of entries) {

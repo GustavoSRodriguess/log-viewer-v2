@@ -6,7 +6,6 @@ import { LogEntry } from './LogEntry';
 import { useLogParser } from '../hooks/userLogParser';
 import { API_URL } from '../config';
 import { ThemeToggle } from './ThemeToggle';
-import { useTheme } from '../contexts/ThemeContext';
 import { NotificationAlert } from './NotificationAlert';
 
 const LogViewer = () => {
@@ -16,6 +15,7 @@ const LogViewer = () => {
         zarabatana: [],
         tomcat: [],
         platform: [],
+        machete: [],
         others: [],
     });
     const [selectedFile, setSelectedFile] = useState(null);
@@ -27,6 +27,8 @@ const LogViewer = () => {
     const [expandedFolders, setExpandedFolders] = useState({});
 
     const { parseLog } = useLogParser();
+
+    const logContainerRef = React.useRef(null);
 
     const fetchLogFiles = async () => {
         try {
@@ -41,8 +43,6 @@ const LogViewer = () => {
     const fetchLogContent = async (filename) => {
         setLoading(true);
         try {
-            setLogs([]);
-            setFilteredLogs([]);
 
             const response = await fetch(`${API_URL}/api/logs/${filename}`);
             const content = await response.text();
@@ -57,6 +57,7 @@ const LogViewer = () => {
             setLoading(false);
         }
     };
+
 
     const clearAllLogs = async () => {
         if (window.confirm('Tem certeza que deseja apagar TODOS os arquivos de log? Esta ação não pode ser desfeita.')) {
@@ -138,8 +139,23 @@ const LogViewer = () => {
     };
 
     useEffect(() => {
-        fetchLogFiles();
+        const interval = setInterval(() => {
+            fetchLogFiles();
+        }, 5000); // 5 segundos
+
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (!selectedFile) return;
+
+        const interval = setInterval(() => {
+            fetchLogContent(selectedFile);
+        }, 5000); // 5 segundos
+
+        return () => clearInterval(interval);
+    }, [selectedFile]);
+
 
     useEffect(() => {
         let filtered = logs;
@@ -206,16 +222,25 @@ const LogViewer = () => {
                             onSearchChange={(e) => setSearchTerm(e.target.value)}
                             selectedLevel={selectedLevel}
                             onLevelChange={(e) => setSelectedLevel(e.target.value)}
+                            onScrollToTop={() => {
+                                setTimeout(() => {
+                                    if (logContainerRef.current) {
+                                        //ir para o final
+                                        // logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+                                        logContainerRef.current.scrollTop = 0;
+                                    }
+                                }, 100);
+                            }}
                         />
 
-                        <div className="flex-1 overflow-y-auto">
-                            {loading ? (
+                        <div className="flex-1 overflow-y-auto scroll-smooth" ref={(el) => (logContainerRef.current = el)}>
+                            {/* por hora vou deixar sem, tava atrapalhando quando atualziada sozinho :( {loading ? (
                                 <div className="flex justify-center items-center h-40">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-yellow-500"></div>
                                 </div>
-                            ) : (
+                            ) : ( */}
                                 <div className="space-y-4">
-                                    {filteredLogs.map((log, index) => (
+                                    {[...filteredLogs].reverse().map((log, index) => (
                                         <LogEntry
                                             key={index}
                                             log={log}
@@ -225,7 +250,7 @@ const LogViewer = () => {
                                         />
                                     ))}
                                 </div>
-                            )}
+                            {/* )} */}
                         </div>
                     </div>
                 </div>
