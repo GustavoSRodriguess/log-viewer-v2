@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from './Header';
 import { SearchBar } from './SearchBar';
 import { FolderView } from './FolderView';
@@ -28,10 +28,9 @@ const LogViewer = () => {
     const [expandedFolders, setExpandedFolders] = useState({});
 
     const { parseLog } = useLogParser();
+    const logContainerRef = useRef(null);
 
-    const logContainerRef = React.useRef(null);
-
-    const fetchLogFiles = async () => {
+    const fetchLogFiles = useCallback(async () => {
         try {
             const response = await fetch(`${API_URL}/api/logs`);
             const files = await response.json();
@@ -39,35 +38,36 @@ const LogViewer = () => {
         } catch (error) {
             console.error('Error fetching log files:', error);
         }
-    };
+    }, []);
 
-    const fetchLogContent = async (filename) => {
-        setLoading(true);
+    const handleSelectFile = useCallback((filename) => {
+        if (filename !== selectedFile) {
+            setLoading(true);
+            setSelectedFile(filename);
+            setLogs([]);
+            setFilteredLogs([]);
+            setExpandedLogs({});
+        }
+    }, [selectedFile]);
+
+    const fetchLogContent = useCallback(async (filename, isAutoRefresh = false) => {
+        if (!isAutoRefresh && !loading) {
+            setLoading(true);
+        }
+
         try {
-
             const response = await fetch(`${API_URL}/api/logs/${filename}`);
             const content = await response.text();
             const parsedLogs = parseLog(content);
-
             setLogs(parsedLogs);
-            setSelectedFile(filename);
-            setExpandedLogs((prev) => {
-                const newExpanded = {};
-                parsedLogs.forEach((log) => {
-                    const key = `${log.timestamp || ''}_${log.message}`;
-                    if (prev[key]) {
-                        newExpanded[key] = true; // ← use a mesma chave aqui
-                    }
-                });
-                return newExpanded;
-            });
-
         } catch (error) {
             console.error('Error fetching log content:', error);
         } finally {
-            setLoading(false);
+            if (!isAutoRefresh || (isAutoRefresh && logs.length === 0)) {
+                setLoading(false);
+            }
         }
-    };
+    }, [parseLog, loading, logs.length]);
 
 
     const clearAllLogs = async () => {
@@ -79,6 +79,7 @@ const LogViewer = () => {
                 setSelectedFile(null);
                 setLogs([]);
                 setFilteredLogs([]);
+                setExpandedLogs({});
                 fetchLogFiles();
             } catch (error) {
                 console.error('Error clearing logs:', error);
@@ -96,6 +97,7 @@ const LogViewer = () => {
                     setSelectedFile(null);
                     setLogs([]);
                     setFilteredLogs([]);
+                    setExpandedLogs({});
                 }
                 fetchLogFiles();
             } catch (error) {
@@ -110,23 +112,18 @@ const LogViewer = () => {
                 const response = await fetch(`${API_URL}/api/logs/old`, {
                     method: 'DELETE',
                 });
-
                 const result = await response.json();
-
-                if (response.status === 500) {
-                    throw new Error(result.error || 'Erro interno do servidor');
-                }
-
+                if (response.status === 500) throw new Error(result.error || 'Erro interno do servidor');
                 if (response.status === 207) {
                     const errorCount = result.errors?.length || 0;
                     alert(`Parcialmente concluído.\nArquivos deletados: ${result.deletedFiles.length}\nErros encontrados: ${errorCount}`);
                 } else {
                     alert(`Deletado com sucesso ${result.deletedFiles.length} logs antigos`);
                 }
-
                 setSelectedFile(null);
                 setLogs([]);
                 setFilteredLogs([]);
+                setExpandedLogs({});
                 fetchLogFiles();
             } catch (e) {
                 console.error('Erro ao limpar dados:', e);
@@ -136,73 +133,55 @@ const LogViewer = () => {
     };
 
     const toggleFolder = (folderName) => {
-        setExpandedFolders((prev) => ({
-            ...prev,
-            [folderName]: !prev[folderName],
-        }));
+        setExpandedFolders((prev) => ({ ...prev, [folderName]: !prev[folderName] }));
     };
 
     const toggleExpand = (log) => {
-        const key = `${log.timestamp || ''}_${log.message}`;
         setExpandedLogs((prev) => ({
             ...prev,
-            [key]: !prev[key],
+            [log.stableKey]: !prev[log.stableKey],
         }));
     };
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            fetchLogFiles();
-        }, 5000); // 5 segundos
-
+        fetchLogFiles();
+        const interval = setInterval(fetchLogFiles, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchLogFiles]);
 
+    // Effect for fetching content when selectedFile changes (manual selection or auto-refresh)
     useEffect(() => {
-        if (!selectedFile) return;
-
-        const interval = setInterval(() => {
-            fetchLogContent(selectedFile);
-        }, 5000); // 5 segundos
-
-        return () => clearInterval(interval);
-    }, [selectedFile]);
-
+        if (selectedFile) {
+            fetchLogContent(selectedFile, false);
+            const interval = setInterval(() => fetchLogContent(selectedFile, true), 5000);
+            return () => clearInterval(interval);
+        }
+    }, [selectedFile, fetchLogContent]);
 
     useEffect(() => {
         let filtered = logs;
-
         if (searchTerm) {
             filtered = filtered.filter(
                 (log) =>
                     log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (log.hasStack &&
-                        log.stackTrace.some((line) => line.toLowerCase().includes(searchTerm.toLowerCase())))
+                    (log.hasStack && log.stackTrace.some((line) => line.toLowerCase().includes(searchTerm.toLowerCase())))
             );
         }
-
         if (selectedLevel !== 'all') {
             filtered = filtered.filter((log) => log.level === selectedLevel);
         }
-
         setFilteredLogs(filtered);
     }, [logs, searchTerm, selectedLevel]);
 
     return (
         <div className="h-screen bg-gray-100 dark:bg-gray-900 flex overflow-hidden transition-colors duration-200">
-            {/* sidebar */}
             <div className="w-80 bg-white dark:bg-gray-800 shadow-lg flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {/*talvez eu devesse ter criado um cor no tailwind*/}
                         <span className='text-banana'>Banana</span> Log
                     </h2>
                     <BananaIcon className='text-banana' />
-                    <NotificationAlert
-                        selectedFile={selectedFile}
-                        parseLog={parseLog}
-                        setLogs={setLogs}
-                    />
+                    <NotificationAlert selectedFile={selectedFile} parseLog={parseLog} setLogs={setLogs} />
                     <ThemeToggle />
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 dark:text-gray-100">
@@ -211,26 +190,20 @@ const LogViewer = () => {
                             key={folder}
                             folder={folder}
                             files={files}
-                            isExpanded={expandedFolders[folder]}
-                            onToggle={toggleFolder}
+                            isExpanded={!!expandedFolders[folder]}
+                            onToggle={() => toggleFolder(folder)}
                             selectedFile={selectedFile}
-                            onSelectFile={fetchLogContent}
+                            onSelectFile={handleSelectFile}
                             onDeleteFile={deleteLog}
                         />
                     ))}
                 </div>
             </div>
 
-            {/* main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="bg-white dark:bg-gray-800 shadow-sm p-4">
-                    <Header
-                        onClearAll={clearAllLogs}
-                        onRefresh={fetchLogFiles}
-                        onDeleteOld={deleteOldLog}
-                    />
+                    <Header onClearAll={clearAllLogs} onRefresh={fetchLogFiles} onDeleteOld={deleteOldLog} />
                 </div>
-
                 <div className="flex-1 overflow-hidden">
                     <div className="h-full flex flex-col p-6">
                         <SearchBar
@@ -238,40 +211,29 @@ const LogViewer = () => {
                             onSearchChange={(e) => setSearchTerm(e.target.value)}
                             selectedLevel={selectedLevel}
                             onLevelChange={(e) => setSelectedLevel(e.target.value)}
-                            onScrollToTop={() => {
-                                setTimeout(() => {
-                                    if (logContainerRef.current) {
-                                        logContainerRef.current.scrollTop = 0;
-                                    }
-                                }, 100);
-                            }}
-                            onScrollToBotton={() => {
-                                setTimeout(() => {
-                                    if (logContainerRef.current) {
-                                        logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-                                    }
-                                }, 100);
-                            }}
+                            onScrollToTop={() => { if (logContainerRef.current) logContainerRef.current.scrollTop = 0; }}
+                            onScrollToBotton={() => { if (logContainerRef.current) logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight; }}
                         />
-
-                        <div className="flex-1 overflow-y-auto scroll-smooth" ref={(el) => (logContainerRef.current = el)}>
-                            {/* por hora vou deixar sem, tava atrapalhando quando atualziada sozinho :( {loading ? (
+                        <div
+                            className="flex-1 overflow-y-auto scroll-smooth"
+                            ref={logContainerRef}
+                        >
+                            {/* {loading ? (
                                 <div className="flex justify-center items-center h-40">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-yellow-500"></div>
                                 </div>
                             ) : ( */}
                                 <div className="space-y-4">
-                                    {[...filteredLogs].reverse().map((log, index) => (
+                                    {[...filteredLogs].reverse().map((log) => (
                                         <LogEntry
-                                            key={`${log.timestamp || ''}_${log.message}`}
+                                            key={log.stableKey}
                                             log={log}
-                                            index={index}
-                                            isExpanded={expandedLogs[`${log.timestamp || ''}_${log.message}`]}
+                                            isExpanded={!!expandedLogs[log.stableKey]}
                                             onToggleExpand={() => toggleExpand(log)}
                                         />
                                     ))}
                                 </div>
-                            {/* )} */}
+                            {/*)}*/}
                         </div>
                     </div>
                 </div>
@@ -281,3 +243,4 @@ const LogViewer = () => {
 };
 
 export default LogViewer;
+

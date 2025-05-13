@@ -3,22 +3,19 @@ export const useLogParser = () => {
         const logEntries = logText.split("\n");
         const parsedLogs = [];
         let currentLog = null;
-        let isCollectingArrayContent = false; // True when we are between ( and )
-        let arrayLinesBuffer = []; // Temporary buffer for lines of the current array, including '(' and ')'
-        let isPotentialArrayHeaderLine = false; // True if the current log's initial line ended with " Array"
+        let isCollectingArrayContent = false;
+        let arrayLinesBuffer = [];
+        let isPotentialArrayHeaderLine = false;
 
         const processArrayContent = (contentLinesWithParentheses) => {
-            // contentLinesWithParentheses includes '(', content, and ')'
             return contentLinesWithParentheses.map(line => line.trimStart()).join("\n");
         };
 
         const finalizeCurrentLog = () => {
             if (currentLog) {
                 if (isCollectingArrayContent) {
-                    // Array was started with '(' but ')' was not found
                     currentLog.hasArray = false;
                     currentLog.arrayData = null;
-                    // Append buffered lines (which would include the opening '(') to the main message
                     if (arrayLinesBuffer.length > 0) {
                         currentLog.message += "\n" + arrayLinesBuffer.join("\n");
                     }
@@ -42,6 +39,11 @@ export const useLogParser = () => {
 
             if (dateMatch && !isCollectingArrayContent) {
                 finalizeCurrentLog();
+                // Use a stable key based on timestamp, initial log line content, AND index
+                // This ensures the key remains unique even for identical logs at the same timestamp
+                const firstLineOfMessage = line;
+                const stableKeyValue = `${dateMatch[1]}---${firstLineOfMessage}---${i}`;
+
                 currentLog = {
                     timestamp: dateMatch[1],
                     level: (() => {
@@ -52,7 +54,6 @@ export const useLogParser = () => {
                                 'Error': 'Error', 'Fatal error': 'Error'
                             }[phpLevelMatch[1]];
                         }
-                        // Basic keyword detection for level if not a PHP specific one
                         if (trimmedLine.toLowerCase().includes("error")) return "Error";
                         if (trimmedLine.toLowerCase().includes("warning")) return "Warning";
                         if (trimmedLine.toLowerCase().includes("notice")) return "Notice";
@@ -63,10 +64,10 @@ export const useLogParser = () => {
                     arrayData: null,
                     hasStack: false,
                     stackTrace: [],
+                    stableKey: stableKeyValue
                 };
 
-                // Check if the primary message line itself indicates an array that will be followed by '('
-                if (trimmedLine.endsWith(" Array")) { // Example: "[timestamp] Some Message Array"
+                if (trimmedLine.endsWith(" Array")) {
                     isPotentialArrayHeaderLine = true;
                 } else if (trimmedLine.includes('Stack trace:')) {
                     currentLog.hasStack = true;
@@ -76,20 +77,18 @@ export const useLogParser = () => {
                 if (isPotentialArrayHeaderLine && trimmedLine === "(") {
                     currentLog.hasArray = true;
                     isCollectingArrayContent = true;
-                    arrayLinesBuffer = [line]; // Start buffer with the line that is '('
+                    arrayLinesBuffer = [line];
                     isPotentialArrayHeaderLine = false;
                 } else if (isCollectingArrayContent) {
-                    arrayLinesBuffer.push(line); // Add current line to buffer
+                    arrayLinesBuffer.push(line);
                     if (trimmedLine === ")") {
                         currentLog.arrayData = processArrayContent(arrayLinesBuffer);
-                        isCollectingArrayContent = false; // Done with this array
+                        isCollectingArrayContent = false;
                     }
                 } else if (currentLog.hasStack && (trimmedLine.startsWith('#') || (currentLog.stackTrace.length > 0 && trimmedLine))) {
                     currentLog.stackTrace.push(line);
                 } else {
                     if (isPotentialArrayHeaderLine) {
-                        // It was a potential array header, but the next line wasn't '('
-                        // So, it's just part of the normal message.
                         isPotentialArrayHeaderLine = false;
                     }
                     currentLog.message += "\n" + line;

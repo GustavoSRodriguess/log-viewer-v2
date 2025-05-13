@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
-export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
+export const LogEntry = ({ log, isExpanded, onToggleExpand }) => {
     const hasCollapsibleContent = log.hasStack || log.hasArray;
 
     const getDisplayMessage = () => {
@@ -41,7 +41,7 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
                     <div className="flex items-start gap-2">
                         {hasCollapsibleContent && (
                             <button
-                                onClick={() => onToggleExpand(index)}
+                                onClick={() => onToggleExpand()}
                                 className="mt-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                             >
                                 {isExpanded ?
