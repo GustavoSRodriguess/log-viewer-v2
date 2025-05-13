@@ -20,7 +20,7 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
                     ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                     : log.level === 'Notice'
                         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 mr-5'
                 }`}
         >
             <div className="flex justify-between items-start">
@@ -51,16 +51,16 @@ export const LogEntry = ({ log, index, isExpanded, onToggleExpand }) => {
                             </button>
                         )}
                         <div className="flex-1">
-                            <pre className="text-sm whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100">
+                            <pre className="text-sm whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 overflow-x-auto max-w-full">
                                 {getDisplayMessage()}
                             </pre>
                             {log.hasArray && isExpanded && log.arrayData && (
-                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">
+                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 overflow-x-auto max-w-full">
                                     {log.arrayData}
                                 </pre>
                             )}
                             {log.hasStack && isExpanded && log.stackTrace && log.stackTrace.length > 0 && (
-                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400">
+                                <pre className="text-sm whitespace-pre-wrap break-words mt-2 pl-4 border-l-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 overflow-x-auto max-w-full">
                                     {log.stackTrace.join('\n')}
                                 </pre>
                             )}

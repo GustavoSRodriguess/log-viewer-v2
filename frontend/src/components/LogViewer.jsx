@@ -51,7 +51,17 @@ const LogViewer = () => {
 
             setLogs(parsedLogs);
             setSelectedFile(filename);
-            setExpandedLogs({});
+            setExpandedLogs((prev) => {
+                const newExpanded = {};
+                parsedLogs.forEach((log) => {
+                    const key = `${log.timestamp || ''}_${log.message}`;
+                    if (prev[key]) {
+                        newExpanded[key] = true; // ← use a mesma chave aqui
+                    }
+                });
+                return newExpanded;
+            });
+
         } catch (error) {
             console.error('Error fetching log content:', error);
         } finally {
@@ -132,10 +142,11 @@ const LogViewer = () => {
         }));
     };
 
-    const toggleExpand = (index) => {
+    const toggleExpand = (log) => {
+        const key = `${log.timestamp || ''}_${log.message}`;
         setExpandedLogs((prev) => ({
             ...prev,
-            [index]: !prev[index],
+            [key]: !prev[key],
         }));
     };
 
@@ -252,11 +263,11 @@ const LogViewer = () => {
                                 <div className="space-y-4">
                                     {[...filteredLogs].reverse().map((log, index) => (
                                         <LogEntry
-                                            key={index}
+                                            key={`${log.timestamp || ''}_${log.message}`}
                                             log={log}
                                             index={index}
-                                            isExpanded={expandedLogs[index]}
-                                            onToggleExpand={toggleExpand}
+                                            isExpanded={expandedLogs[`${log.timestamp || ''}_${log.message}`]}
+                                            onToggleExpand={() => toggleExpand(log)}
                                         />
                                     ))}
                                 </div>

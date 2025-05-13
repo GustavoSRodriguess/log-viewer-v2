@@ -31,12 +31,12 @@ export const SearchBar = ({ searchTerm, onSearchChange, selectedLevel, onLevelCh
         {/* {onScrollToTop && ( */}
             <ChevronsDownIcon
                 onClick={onScrollToBotton}
-                className='h-10 w-10 bg-gray-800 rounded text-gray-300 cursor-pointer hover:text-banana'
+                className='border h-10 w-10 bg-white dark:bg-gray-800 rounded dark:text-gray-300 cursor-pointer hover:text-banana dark:hover:text-banana border-gray-200 dark:border-gray-700'
                 //className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
             />
         {/* )} */}
         <ChevronsUpIcon
-            className='h-10 w-10 bg-gray-800 rounded text-gray-300 cursor-pointer hover:text-banana'
+            className='border h-10 w-10 bg-white dark:bg-gray-800 rounded dark:text-gray-300 cursor-pointer hover:text-banana dark:hover:text-banana border-gray-200 dark:border-gray-700'
             onClick={onScrollToTop}
         />
     </div>
