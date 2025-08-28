@@ -14,13 +14,15 @@ export const useLogParser = () => {
         const finalizeCurrentLog = () => {
             if (currentLog) {
                 if (isCollectingArrayContent) {
-                    currentLog.hasArray = false;
-                    currentLog.arrayData = null;
+                    // Se ainda está coletando, adiciona tudo como mensagem normal
                     if (arrayLinesBuffer.length > 0) {
                         currentLog.message += "\n" + arrayLinesBuffer.join("\n");
                     }
-                } else if (isPotentialArrayHeaderLine && !currentLog.hasArray) {
-                    // Header looked like an array, but '(' never came.
+                    currentLog.hasArray = false;
+                    currentLog.arrayData = null;
+                } else if (isPotentialArrayHeaderLine) {
+                    // Se era potencial mas nunca veio o "(", deixa como estava
+                    isPotentialArrayHeaderLine = false;
                 }
                 parsedLogs.push(currentLog);
             }
@@ -33,14 +35,16 @@ export const useLogParser = () => {
             const line = logEntries[i];
             const trimmedLine = line.trim();
 
+            // Pula linhas vazias se não estiver coletando array
             if (!line.length && !isCollectingArrayContent) continue;
 
+            // Detecta nova entrada de log
             const dateMatch = trimmedLine.match(/^(\[.*?\])/);
 
             if (dateMatch && !isCollectingArrayContent) {
+                // Finaliza log anterior
                 finalizeCurrentLog();
-                // Use a stable key based on timestamp, initial log line content, AND index
-                // This ensures the key remains unique even for identical logs at the same timestamp
+
                 const firstLineOfMessage = line;
                 const stableKeyValue = `${dateMatch[1]}---${firstLineOfMessage}---${i}`;
 
@@ -67,28 +71,52 @@ export const useLogParser = () => {
                     stableKey: stableKeyValue
                 };
 
-                if (trimmedLine.endsWith(" Array")) {
+                // Detecta se a linha termina com "Array" - melhorada para o formato específico
+                const afterTimestamp = trimmedLine.substring(dateMatch[1].length).trim();
+
+                // Casos que devem ser detectados como array:
+                // 1. "[timestamp] Array" - linha só com Array
+                // 2. "[timestamp] resultArray" - termina com Array
+                // 3. "[timestamp] mensagem Array" - termina com " Array"
+                if (afterTimestamp === "Array" ||
+                    afterTimestamp.endsWith("Array") ||
+                    afterTimestamp.endsWith(" Array")) {
                     isPotentialArrayHeaderLine = true;
-                } else if (trimmedLine.includes('Stack trace:')) {
+                }
+
+                if (trimmedLine.includes('Stack trace:')) {
                     currentLog.hasStack = true;
                 }
 
             } else if (currentLog) {
+                // Se temos um log atual, processa a linha
+
                 if (isPotentialArrayHeaderLine && trimmedLine === "(") {
+                    // Começou o array
                     currentLog.hasArray = true;
                     isCollectingArrayContent = true;
                     arrayLinesBuffer = [line];
                     isPotentialArrayHeaderLine = false;
+
                 } else if (isCollectingArrayContent) {
+                    // Coletando conteúdo do array
                     arrayLinesBuffer.push(line);
+
                     if (trimmedLine === ")") {
+                        // Terminou o array
                         currentLog.arrayData = processArrayContent(arrayLinesBuffer);
                         isCollectingArrayContent = false;
+                        arrayLinesBuffer = [];
                     }
+
                 } else if (currentLog.hasStack && (trimmedLine.startsWith('#') || (currentLog.stackTrace.length > 0 && trimmedLine))) {
+                    // Coletando stack trace
                     currentLog.stackTrace.push(line);
+
                 } else {
+                    // Linha normal, adiciona à mensagem
                     if (isPotentialArrayHeaderLine) {
+                        // Era potencial array mas não veio "(", então não é array
                         isPotentialArrayHeaderLine = false;
                     }
                     currentLog.message += "\n" + line;
@@ -96,7 +124,12 @@ export const useLogParser = () => {
             }
         }
 
+        // Finaliza o último log
         finalizeCurrentLog();
+
+        // Debug: mostra quantos arrays foram encontrados
+        const arraysFound = parsedLogs.filter(log => log.hasArray).length;
+
         return parsedLogs;
     };
 
